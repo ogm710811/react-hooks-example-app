@@ -4,65 +4,63 @@ import IngredientForm from "./IngredientForm";
 import Search from "./Search";
 import IngredientList from "./IngredientList";
 import ErrorModal from "../UI/ErrorModal";
+import useApi from "../../hooks/apiCalls";
 
 function Ingredients() {
   const [ingredients, setIngredients] = useState([]);
-  const [isLoadingIngredients, setLoadingIngredients] = useState(false);
-  const [errorMessage, setErrorMessage] = useState(null);
+  const {
+    isLoading,
+    data,
+    error,
+    fetchData,
+    reqIdentifier,
+    clearError,
+  } = useApi();
+
   useEffect(() => {
-    console.log("RENDERING INGREDIENTS");
-  }, [ingredients]);
-
-  const addIngredientHandler = useCallback((item) => {
-    setLoadingIngredients(true);
-    fetch("https://react-hook-example-app.firebaseio.com/ingredients.json", {
-      method: "POST",
-      body: JSON.stringify(item),
-      headers: { "Content-Type": "application/json" },
-    })
-      .then((response) => {
-        setLoadingIngredients(false);
-        return response.json();
-      })
-      .then((resData) => {
-        setIngredients((prevState) => [
-          ...prevState,
-          { ...item, id: resData.name },
-        ]);
-      })
-      .catch((error) => {
-        setLoadingIngredients(false);
-        setErrorMessage(error.message);
-      });
-  }, []);
-
-  const removeIngredientHandler = useCallback((id) => {
-    setLoadingIngredients(true);
-    fetch(
-      `https://react-hook-example-app.firebaseio.com/ingredients/${id}.json`,
-      {
-        method: "DELETE",
-      }
-    )
-      .then(() => {
-        setLoadingIngredients(false);
+    if (data && reqIdentifier === "REMOVE_INGREDIENT") {
+      if (!data.hasOwnProperty("title")) {
         setIngredients((prevState) =>
-          prevState.filter((ingredient) => ingredient.id !== id)
+          prevState.filter((ingredient) => ingredient.id !== data.id)
         );
-      })
-      .catch((error) => {
-        setLoadingIngredients(false);
-        setErrorMessage(error.message);
-      });
-  }, []);
+      }
+    }
+    if (data && reqIdentifier === "ADD_INGREDIENT") {
+      if (data.hasOwnProperty("title")) {
+        setIngredients((prevState) => [...prevState, data]);
+      }
+    }
+  }, [data, reqIdentifier]);
+
+  const addIngredientHandler = useCallback(
+    (item) => {
+      fetchData(
+        "https://react-hook-example-app.firebaseio.com/ingredients.json",
+        "POST",
+        JSON.stringify(item),
+        item,
+        "ADD_INGREDIENT"
+      );
+    },
+    [fetchData]
+  );
+
+  const removeIngredientHandler = useCallback(
+    (id) => {
+      fetchData(
+        `https://react-hook-example-app.firebaseio.com/ingredients/${id}.json`,
+        "DELETE",
+        null,
+        id,
+        "REMOVE_INGREDIENT"
+      );
+    },
+    [fetchData]
+  );
 
   const searchIngredientsHandler = useCallback((ingredients) => {
     setIngredients(ingredients);
   }, []);
-
-  const clearErrorHandler = () => {
-    setErrorMessage(null);
-  };
 
   const ingredientList = useMemo(() => {
     return (
@@ -77,12 +75,10 @@ function Ingredients() {
 
   return (
     <div className="App">
-      {errorMessage && (
-        <ErrorModal onClose={clearErrorHandler}>{errorMessage}</ErrorModal>
-      )}
+      {error && <ErrorModal onClose={clearError}>{error}</ErrorModal>}
       <IngredientForm
         onAddItem={addIngredientHandler}
-        onLoadingIngredients={isLoadingIngredients}
+        onLoadingIngredients={isLoading}
       />
       <section>
         <Search onIngredientsSearch={searchIngredientsHandler} />

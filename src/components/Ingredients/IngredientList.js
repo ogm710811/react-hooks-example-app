@@ -2,8 +2,7 @@ import React, { memo } from "react";
 
 import "./IngredientList.css";
 
-const IngredientList = memo(({ingredients, onRemoveItem}) => {
-  console.log("RENDERING INGREDIENT LIST");
+const IngredientList = memo(({ ingredients, onRemoveItem }) => {
   return (
     <section className="ingredient-list">
       <h2>Loaded Ingredients</h2>
