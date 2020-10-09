@@ -2,49 +2,55 @@ import React, { useEffect, useRef, useState } from "react";
 
 import Card from "../UI/Card";
 import "./Search.css";
+import useApi from "../../hooks/apiCalls";
+import ErrorModal from "../UI/ErrorModal";
 
 const Search = React.memo(({ onIngredientsSearch }) => {
   const [searchInput, setSearchInput] = useState("");
   const searchInputRef = useRef();
+  const { isLoading, data, fetchData, error, clearError } = useApi();
 
-  const fetchIngredients = async (queryParams) => {
-    const response = await fetch(
-      "https://react-hook-example-app.firebaseio.com/ingredients.json" +
-        queryParams
-    );
-    const data = await response.json();
-    return data;
-  };
   useEffect(() => {
     const timer = setTimeout(() => {
       if (searchInput === searchInputRef.current.value) {
-        const searchedIngredients = [];
         const queryParams =
           searchInput.length === 0
             ? ""
             : `?orderBy="title"&equalTo="${searchInput}"`;
-        fetchIngredients(queryParams).then((serverData) => {
-          for (const key in serverData) {
-            searchedIngredients.push({
-              id: key,
-              title: serverData[key].title,
-              amount: serverData[key].amount,
-            });
-          }
-          onIngredientsSearch(searchedIngredients);
-        });
+
+        fetchData(
+          "https://react-hook-example-app.firebaseio.com/ingredients.json" +
+            queryParams,
+          "GET"
+        );
       }
     }, 500);
     return () => {
-      clearTimeout(timer)
+      clearTimeout(timer);
+    };
+  }, [searchInput, fetchData, searchInputRef]);
+
+  useEffect(() => {
+    if (data) {
+      const loadedIngredients = [];
+      for (const key in data) {
+        loadedIngredients.push({
+          id: key,
+          title: data[key].title,
+          amount: data[key].amount,
+        });
+      }
+      onIngredientsSearch(loadedIngredients);
     }
-  }, [searchInput, onIngredientsSearch, searchInputRef]);
+  }, [data, onIngredientsSearch]);
 
   return (
     <section className="search">
+      {error && <ErrorModal onClose={clearError}>{error}</ErrorModal>}
       <Card>
         <div className="search-input">
           <label>Filter by Title</label>
+          {isLoading && <span>Is loading ...</span>}
           <input
             ref={searchInputRef}
             type="text"
